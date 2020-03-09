@@ -1,156 +1,304 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#pragma warning(disable : 4996)
+
+#define MIN_AMOUNT 1
+#define MAX_AMOUNT 100000
+
 struct Node {
 	int value;
-	Node* nextNode;
+	Node* prev;
+	Node* next;
 };
 
 class Number {
-	char sign;
-	Node* string;
+	int sign;
+	long length;
+	Node* head;
+	Node* tail;
 
 public:
 	Number() {
 		sign = '+';
-		Node* newNode = new Node;
-		newNode->value = 0;
-		newNode->nextNode = nullptr;
-		string = newNode;
+		length = 0;
+		head = new Node;
+		tail = new Node;
+		head->value = 'h';
+		head->prev = nullptr;
+		head->next = tail;
+		tail->value = 't';
+		tail->prev = head;
+		tail->next = nullptr;
 	}
-	char getSign() {
+	~Number();	
+	int getSign() {
 		return sign;
 	}
-	Node* getString() {
-		return string;
+	long getLenght() {
+		return length;
+	}
+	Node* getHead() {
+		return head;
+	}
+	Node* getTail() {
+		return tail;
 	}
 	void setSign(char s) {
 		sign = s;
 	}
 	void addFirst(int v) {
+		Node* tmpHeadNext = head->next;
 		Node* newNode = new Node;
 		newNode->value = v;
-		newNode->nextNode = nullptr;
-		Node* tmp = string->nextNode;
-		string->nextNode = newNode;
-		newNode->nextNode = tmp;
+		newNode->prev = head;
+		newNode->next = tmpHeadNext;
+		head->next = newNode;
+		tmpHeadNext->prev = newNode;
 	}
 	void addLast(int v) {
+		Node* tmpTailPrev = tail->prev;
 		Node* newNode = new Node;
 		newNode->value = v;
-		newNode->nextNode = nullptr;
-		Node* tmp = string;
-		while (tmp->nextNode != nullptr) {
-			tmp = tmp->nextNode;
-		}
-		Node* x = tmp->nextNode;
-		tmp->nextNode = newNode;
-		newNode->nextNode = x;
+		newNode->next = tail;
+		newNode->prev = tmpTailPrev;
+		tail->prev = newNode;
+		tmpTailPrev->next = newNode;
 	}
 	void printNumber() {
-		Node* s = string;
-		while (s != nullptr) {
-			printf_s("%d", s->value);
-			s = s->nextNode;
+		Node* tmpTail = tail->prev;
+		if (sign == '-') printf_s("-");
+		while (tmpTail->prev != nullptr) {
+			printf_s("%d", tmpTail->value);
+			tmpTail = tmpTail->prev;
 		}
 		printf_s("\n");
 	}
-	void printStats() {
-		printf_s("SIGN   -> %c\n", sign);
-		printf_s("NUMBER -> ");
-		printNumber();
-	}
-	void replaceFirstValue(int v) {
-		string->value = v;
-	}
-	void printNodes() {
-		int cnt = 1;
-		Node* tmp = string;
-		while (tmp != nullptr) {
-			printf_s("%0d. Node, value = %d, next = %p\n", cnt, tmp->value, &tmp->nextNode);
-			tmp = tmp->nextNode;
-			cnt++;
+	void countElements() {
+		Node* tmpHead = head->next;
+		long counter = 0;
+		while (tmpHead->next != nullptr) {
+			counter++;
+			tmpHead = tmpHead->next;
 		}
+		length = counter;
 	}
 };
 
-void addNumbers(Number** numbers, int position, int a, int b);
-void subtractNumbers(Number** numbers, int position, int a, int b);
-void printMinNumber(int amountOfNumbers, Number** numbers);
-void printMaxNumber(int amountOfNumbers, Number** numbers);
-void printAllNumbers(int amountOfNumbers, Number** numbers);
+void addNumbers(int a, int b, Number** numbers, int position);
+void subtractNumbers(int a, int b, Number** numbers, int position);
+void findMin(Number** numbers, int amountOfNumbers);
+void findMax(Number** numbers, int amountOfNumbers);
+void printAllNumbers(Number** numbers, int amountOfNumbers);
+
+Number* cmpSignMin(Number* a, Number* b);
+Number* cmpSignMax(Number* a, Number* b);
+Number* cmpLengthMin(Number* a, Number* b);
+Number* cmpLengthMax(Number* a, Number* b);
+Number* cmpValuesMin(Number* a, Number* b);
+Number* cmpValuesMax(Number* a, Number* b);
 
 int main(void) {
-
 	int amountOfNumbers;
 	scanf_s("%d ", &amountOfNumbers);
-	Number** numbers = (Number**) malloc(amountOfNumbers * sizeof(Number));
+	if (amountOfNumbers < MIN_AMOUNT || amountOfNumbers > MAX_AMOUNT) exit(1);
 
+	Number** numbers = (Number**)malloc(amountOfNumbers * sizeof(Number));
 	for (int i = 0; i < amountOfNumbers; i++) {
+		char c;
 		Number* n = new Number();
-		numbers[i] = n;
-		int c;
-		int counter = 0;
 		while ((c = getchar()) != '\n') {
-			if (counter == 0 && c == '-') n->setSign(c);
-			else if (counter == 0 && n->getSign() == '+') n->replaceFirstValue(c - 48);
-			else if (counter == 1 && n->getSign() == '-') n->replaceFirstValue(c - 48);
-			else n->addLast(c - 48);
-			counter++;
+			if (c == '-') {
+				n->setSign(c);
+				continue;
+			}
+			else if (c == '+') continue;
+			n->addFirst(atoi(&c));
+		}
+		n->countElements();
+		numbers[i] = n;
+	}
+	char input[25];
+	while (true) {
+		fgets(input, 25, stdin);
+		if (input[0] == '?') printAllNumbers(numbers, amountOfNumbers);
+		else if (input[0] == 'q') exit(0);
+		else if (input[1] == 'i') findMin(numbers, amountOfNumbers);
+		else if (input[1] == 'a') findMax(numbers, amountOfNumbers);
+		else {
+			int a, b, c;
+			char operation;
+			sscanf(input, "%5d = %5d %c %5d", &a, &b, &operation, &c);
+			printf("%5d, %5d, %5d %c\n", a, b, c, operation);
+			if (a < amountOfNumbers && b < amountOfNumbers && c < amountOfNumbers) {
+				for (int i = 0; i < 25; i++) {
+					if (input[i] == '+') {
+						if (numbers[a]->getSign() == numbers[b]->getSign()) addNumbers(b, c, numbers, a);
+						else subtractNumbers(b, c, numbers, a);
+						break;
+					}
+					else if (input[i] == '-') {
+						if (numbers[a]->getSign() == '+' && numbers[b]->getSign() == '-') addNumbers(b, c, numbers, a);
+						else subtractNumbers(b, c, numbers, a);
+						break;
+					}
+				}
+			}
 		}
 	}
-
-	char input[10];
-	while (true) {
-		fgets(input, 10, stdin);
-		if (input[6] == '+') addNumbers(numbers, input[0], input[4], input[8]);
-		else if (input[6] == '-') subtractNumbers(numbers, input[0], input[4], input[8]);
-		else if (input[1] == 'i') printMinNumber(amountOfNumbers, numbers);
-		else if (input[1] == 'a') printMaxNumber(amountOfNumbers, numbers);
-		else if (input[0] == '?') printAllNumbers(amountOfNumbers, numbers);
-		else if (input[0] == 'q') exit(0);
-	}
-
 	return 0;
 }
 
-void addNumbers(Number** numbers, int position, int a, int b) {
-	Number* first = numbers[a - 48];
-	Node* number1 = first->getString();
-	Number* second = numbers[b - 48];
-	Node* number2 = first->getString();
-	Number* n = new Number();
-	int overflow = 0;
-	int sum = 0;
-
-	while (number1 != nullptr || number2 != nullptr) {
-		sum = overflow + ((number1 == nullptr) ? 0 : number1->value) + ((number2 == nullptr) ? 0 : number2->value);
-		if (sum % 9 != sum) overflow = sum % 9;
-		else overflow = 0;
-		number1 = number1->nextNode;
-		number2 = number2->nextNode;
-		n->addLast(sum);
-		n->printNumber();
+void addNumbers(int a, int b, Number** numbers, int position) {
+	Node* tmpA = numbers[a]->getHead()->next;
+	Node* tmpB = numbers[b]->getHead()->next;
+	Number* newNumber = new Number();
+	int valA, valB, overflow = 0, sum = 0;
+	if (numbers[a]->getSign() == numbers[b]->getSign()) {
+		newNumber->setSign(numbers[a]->getSign());
+		while (tmpA->next != nullptr || tmpB->next != nullptr) {
+			valA = (tmpA->next == nullptr) ? 0 : tmpA->value;
+			valB = (tmpB->next == nullptr) ? 0 : tmpB->value;
+			sum = overflow + valA + valB;
+			if (sum % 10 == sum) overflow = 0;
+			else overflow = 1;
+			newNumber->addLast(sum % 10);
+			if (tmpA->next != nullptr) tmpA = tmpA->next;
+			if (tmpB->next != nullptr) tmpB = tmpB->next;
+		}
+		if (overflow) newNumber->addLast(overflow);
 	}
+	numbers[position] = newNumber;
 }
 
-void subtractNumbers(Number** numbers, int position, int a, int b) {
-
+void subtractNumbers(int a, int b, Number** numbers, int position) {
+	// minuend - subtrahend = difference
+	Number* minuend;
+	Number* subtrahend;
+	Number* difference = new Number();
+	if (cmpLengthMax(numbers[a], numbers[b]) == nullptr) {
+		minuend = cmpValuesMax(numbers[a], numbers[b]);
+	}
+	else minuend = cmpLengthMax(numbers[a], numbers[b]);
+	difference->setSign(minuend->getSign());
+	if (minuend == numbers[a]) subtrahend = numbers[b];
+	else subtrahend = numbers[a];
+	Node* tmpA = minuend->getHead()->next;
+	Node* tmpB = subtrahend->getHead()->next;
+	int valA, valB, underflow = 0;
+	while (tmpA->next != nullptr || tmpB->next != nullptr) {
+		valA = (tmpA->next == nullptr) ? 0 : tmpA->value - underflow;
+		valB = (tmpB->next == nullptr) ? 0 : tmpB->value;
+		if (valA >= valB) {
+			difference->addLast(valA - valB);
+			underflow = 0;
+		}
+		else {
+			difference->addLast(valA + 10 - valB);
+			underflow = 1;
+		}
+		if (tmpA->next != nullptr) tmpA = tmpA->next;
+		if (tmpB->next != nullptr) tmpB = tmpB->next;
+	}
+	numbers[position] = difference;
 }
 
-void printMinNumber(int amountOfNumbers, Number** numbers) {
+void findMin(Number** numbers, int amountOfNumbers) {
 	Number* min = numbers[0];
+	for (int i = 1; i < amountOfNumbers; i++) {
+		if (cmpSignMin(min, numbers[i]) == nullptr) {
+			if (min->getSign() == '+') {
+				if (cmpLengthMin(min, numbers[i]) == nullptr) {
+					min = cmpValuesMin(min, numbers[i]);
+				}
+				else min = cmpLengthMin(min, numbers[i]);
+			}
+			else {
+				if (cmpLengthMax(min, numbers[i]) == nullptr) {
+					min = cmpValuesMax(min, numbers[i]);
+				}
+				else min = cmpLengthMax(min, numbers[i]);
+			}
+		}
+		else min = cmpSignMin(min, numbers[i]);
+	}
+	min->printNumber();
+}
+
+void findMax(Number** numbers, int amountOfNumbers) {
+	Number* max = numbers[0];
+	for (int i = 1; i < amountOfNumbers; i++) {
+		if (cmpSignMax(max, numbers[i]) == nullptr) {
+			if (max->getSign() == '+') {
+				if (cmpLengthMax(max, numbers[i]) == nullptr) {
+					max = cmpValuesMax(max, numbers[i]);
+				}
+				else max = cmpLengthMax(max, numbers[i]);
+			}
+			else {
+				if (cmpLengthMin(max, numbers[i]) == nullptr) {
+					max = cmpValuesMin(max, numbers[i]);
+				}
+				else max = cmpLengthMin(max, numbers[i]);
+			}
+		}
+		else max = cmpSignMax(max, numbers[i]);
+	}
+	max->printNumber();
+}
+
+void printAllNumbers(Number** numbers, int amountOfNumbers) {
 	for (int i = 0; i < amountOfNumbers; i++) {
+		numbers[i]->printNumber();
 	}
 }
 
-void printMaxNumber(int amountOfNumbers, Number** numbers) {
-
+Number* cmpSignMin(Number* a, Number* b) {
+	if (a->getSign() > b->getSign()) return a;
+	else if (a->getSign() < b->getSign()) return b;
+	else return nullptr;
 }
 
-void printAllNumbers(int amountOfNumbers, Number** numbers) {
-	for (int i = 0; i < amountOfNumbers; i++) {
-		printf_s("%0d. ", i + 1);
-		numbers[i]->printNumber();
+Number* cmpSignMax(Number* a, Number* b) {
+	if (a->getSign() < b->getSign()) return a;
+	else if (a->getSign() > b->getSign()) return b;
+	else return nullptr;
+}
+
+Number* cmpLengthMin(Number* a, Number* b) {
+	if (a->getLenght() < b->getLenght()) return a;
+	else if (a->getLenght() > b->getLenght()) return b;
+	else return nullptr;
+}
+
+Number* cmpLengthMax(Number* a, Number* b) {
+	if (a->getLenght() > b->getLenght()) return a;
+	else if (a->getLenght() < b->getLenght()) return b;
+	else return nullptr;
+}
+
+Number* cmpValuesMin(Number* a, Number* b) {
+	Node* tmpA = a->getTail()->prev;
+	Node* tmpB = b->getTail()->prev;
+
+	while (true) {
+		if (tmpA->prev == nullptr && tmpB->prev == nullptr) return a;
+		else if (tmpA->value > tmpB->value) return b;
+		else if (tmpA->value < tmpB->value) return a;
+		tmpA = tmpA->prev;
+		tmpB = tmpB->prev;
+	}
+}
+
+Number* cmpValuesMax(Number* a, Number* b) {
+	Node* tmpA = a->getTail()->prev;
+	Node* tmpB = b->getTail()->prev;
+
+	while (true) {
+		if (tmpA->prev == nullptr && tmpB->prev == nullptr) return a;
+		else if (tmpA->value < tmpB->value) return b;
+		else if (tmpA->value > tmpB->value) return a;
+		tmpA = tmpA->prev;
+		tmpB = tmpB->prev;
 	}
 }
